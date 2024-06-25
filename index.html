@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Classification</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Ashzad's Classifier Model</h1>
+
+  <div class="container">
+    <video id="webcam" autoplay playsinline width="300" height="300"></video>
+    <br><br>
+    <!-- <button onclick="startPrediction()">Start Prediction</button> -->
+    <p></p>
+
+    <br><br>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    startPrediction()
+    let webcamElement = document.getElementById('webcam');
+    let resultElement = document.getElementById('result');
+    let model;
+
+    async function setupWebcam() {
+      return new Promise((resolve, reject) => {
+        const navigatorAny = navigator;
+        navigator.getUserMedia = navigator.getUserMedia ||
+          navigatorAny.webkitGetUserMedia || navigatorAny.mozGetUserMedia ||
+          navigatorAny.msGetUserMedia;
+        if (navigator.getUserMedia) {
+          navigator.getUserMedia(
+            { video: true },
+            stream => {
+              webcamElement.srcObject = stream;
+              webcamElement.addEventListener('loadeddata', () => resolve(), false);
+            },
+            error => reject());
+        } else {
+          reject();
+        }
+      });
+    }
+
+    async function predict() {
+      const videoFrame = tf.browser.fromPixels(webcamElement).cast('float32');
+      const resizedFrame = videoFrame.resizeBilinear([300, 300]);
+      const batchedFrame = resizedFrame.expandDims(0);
+
+      const prediction = await model.predict(batchedFrame);
+      const class_scores = await prediction.data();  
+      const max_score_id = class_scores.indexOf(Math.max(...class_scores));
+      const classes = ["Pattern", "Solid"];
+
+      resultElement.innerHTML = classes[max_score_id].toString();
+
+      requestAnimationFrame(predict);
+    }
+
+    async function startPrediction() {
+      model = await tf.loadGraphModel('./model.json');
+      await setupWebcam();
+      predict();
+    }
+  </script>
+</body>
+</html>
