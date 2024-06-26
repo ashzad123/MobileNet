@@ -23,6 +23,7 @@
     let resultElement = document.getElementById('result');
     let useFrontCamera = true;
     let model;
+    let isPredicting = false;
 
     async function setupWebcam(useFrontCamera) {
       if (webcamElement.srcObject) {
@@ -53,12 +54,16 @@
       });
     }
 
-    function flipCamera() {
+    async function flipCamera() {
       useFrontCamera = !useFrontCamera;
-      setupWebcam(useFrontCamera);
+      await setupWebcam(useFrontCamera);
+      if (!isPredicting) {
+        predict();
+      }
     }
 
     async function predict() {
+      isPredicting = true;
       const videoFrame = tf.browser.fromPixels(webcamElement).cast('float32');
       const resizedFrame = videoFrame.resizeBilinear([300, 300]);
       const batchedFrame = resizedFrame.expandDims(0);
@@ -83,6 +88,7 @@
       }
     }
 
+    // Call startPrediction after the DOM is fully loaded
     window.addEventListener('load', startPrediction);
   </script>
 </body>
