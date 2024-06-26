@@ -14,22 +14,22 @@
   <div class="container">
     <video id="webcam" autoplay playsinline width="300" height="300"></video>
     <br><br>
-    <!-- <button onclick="startPrediction()">Start Prediction</button> -->
-    <button  onclick="flipCamera()">Flip Camera</button>
-    <p></p>
-
-    <br><br>
+    <button onclick="flipCamera()">Flip Camera</button>
     <p id="result"></p>
   </div>
 
   <script>
-    startPrediction()
     let webcamElement = document.getElementById('webcam');
     let resultElement = document.getElementById('result');
     let useFrontCamera = true;
     let model;
 
     async function setupWebcam(useFrontCamera) {
+      if (webcamElement.srcObject) {
+        let tracks = webcamElement.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
+
       return new Promise((resolve, reject) => {
         const navigatorAny = navigator;
         navigator.getUserMedia = navigator.getUserMedia ||
@@ -46,16 +46,17 @@
               webcamElement.srcObject = stream;
               webcamElement.addEventListener('loadeddata', () => resolve(), false);
             },
-            error => reject());
+            error => reject(error));
         } else {
-          reject();
+          reject(new Error('getUserMedia not supported'));
         }
       });
     }
+
     function flipCamera() {
-        useFrontCamera = !useFrontCamera;
-        setupWebcam(useFrontCamera );
-      }
+      useFrontCamera = !useFrontCamera;
+      setupWebcam(useFrontCamera);
+    }
 
     async function predict() {
       const videoFrame = tf.browser.fromPixels(webcamElement).cast('float32');
@@ -73,10 +74,16 @@
     }
 
     async function startPrediction() {
-      model = await tf.loadGraphModel('./model.json');
-      await setupWebcam();
-      predict();
+      try {
+        model = await tf.loadGraphModel('./model.json');
+        await setupWebcam(useFrontCamera);
+        predict();
+      } catch (error) {
+        console.error('Error starting prediction:', error);
+      }
     }
+
+    window.addEventListener('load', startPrediction);
   </script>
 </body>
 </html>
